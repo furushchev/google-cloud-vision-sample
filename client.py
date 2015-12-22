@@ -8,6 +8,7 @@ import base64
 import httplib2
 import cv2
 import json
+import pprint
 
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
@@ -21,7 +22,11 @@ class GoogleCloudVisionClient(object):
         self.service = discovery.build_from_document(doc,
                                                      developerKey=api_key,
                                                      http=httplib2.Http())
-        self.types = ["FACE_DETECTION", "LABEL_DETECTION"]
+        self.types = ["FACE_DETECTION",
+                      "LABEL_DETECTION",
+                      "LANDMARK_DETECTION",
+                      "LOGO_DETECTION",
+                      "TEXT_DETECTION"]
         self.continuous = False
         if camera is not None:
             print "use camera %d" % camera
@@ -67,21 +72,30 @@ class GoogleCloudVisionClient(object):
                 if "error" in result:
                     return False
                 cv2.waitKey(1000)
+                cv2.imshow("monitor", img)
         else:
-            result = self.onImage(img)
+            result = self.onImage(self.image)
             self.onDetection(result)
             if "error" in result:
                 return False
             else:
                 print True
 
+    def encodeImage(self, img):
+        _, jpg = cv2.imencode('.jpg', img)
+        return base64.b64encode(jpg)
+
     def onImage(self, img):
         resized = self.resize(img)
-        result = self.sendRequest(base64.b64encode(resized.tostring()))
+        result = self.sendRequest(self.encodeImage(resized))
         return result
 
     def onDetection(self, result):
-        print result
+        pprint.pprint(result)
+        try:
+            print result["textAnnotations"][0]["description"]
+        except:
+            pass
 
 if __name__ == '__main__':
     p = ArgumentParser()
